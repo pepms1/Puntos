@@ -9,6 +9,12 @@
   <title>Puntos Dieta</title>
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css" />
+  <!-- Firebase JS SDKs for Auth and Firestore -->
+  <!-- These scripts bring in Firebase (compat) so that firebase.auth() and firebase.firestore() are available.
+       Replace the version (9.23.0) with the latest if desired. -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
 </head>
 <body>
   <div class="app">
@@ -54,32 +60,6 @@
       </section>
 
       <section class="grid" id="grid"></section>
-
-      <section class="progress-card" aria-labelledby="weightTitle">
-        <div class="progress-head">
-          <div>
-            <h2 id="weightTitle">Progreso en kg</h2>
-            <p class="progress-sub" id="weightDateLabel">Peso del día</p>
-          </div>
-          <span class="progress-badge">kg</span>
-        </div>
-
-        <div class="progress-form">
-          <label class="field">
-            <span>Peso de hoy</span>
-            <input id="weightInput" inputmode="decimal" placeholder="Ej. 72.4" />
-          </label>
-          <div class="custom-actions">
-            <button class="btn primary" id="weightSaveBtn" type="button">Guardar peso</button>
-          </div>
-          <div class="hint">Deja el campo vacío y guarda para borrar el peso de ese día.</div>
-        </div>
-
-        <div class="progress-chart">
-          <canvas id="weightChart" aria-label="Gráfica de progreso de peso" role="img"></canvas>
-          <div class="progress-empty" id="weightEmpty">Registra al menos 2 días para ver la gráfica.</div>
-        </div>
-      </section>
     </main>
 
     <!-- Drawer -->
@@ -220,6 +200,25 @@
     <input type="date" id="datePicker" class="date-picker" />
 
     <footer class="footer-safe"></footer>
+  </div>
+
+  <!-- Login screen overlay. Visible when the user is not authenticated. -->
+  <div class="login-screen" id="loginScreen" aria-hidden="true">
+    <div class="login-card">
+      <h2>Iniciar sesión</h2>
+      <label class="field">
+        <span>Email</span>
+        <input id="loginEmail" type="email" autocomplete="username" />
+      </label>
+      <label class="field">
+        <span>Contraseña</span>
+        <input id="loginPassword" type="password" autocomplete="current-password" />
+      </label>
+      <div class="custom-actions">
+        <button class="btn primary" type="button" id="loginBtn">Entrar</button>
+        <button class="btn" type="button" id="signupBtn">Crear cuenta</button>
+      </div>
+    </div>
   </div>
 
   <script src="app.js"></script>

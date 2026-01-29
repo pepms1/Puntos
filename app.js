@@ -9,6 +9,31 @@
 
   const STORE_KEY = "puntos_dieta_v1";
 
+  // ---- Firebase configuration and initialization ----
+  // Provide your Firebase project configuration below. Replace the placeholder
+  // strings with the values from your Firebase console (firebaseConfig). See
+  // https://firebase.google.com/docs/web/setup#initialize-with-config
+  const firebaseConfig = {
+    apiKey: "AIzaSyBvVA6PoRyDaJKl_C_YDep53QuFzLjH_n8",
+    authDomain: "puntos-app-4caaf.firebaseapp.com",
+    projectId: "puntos-app-4caaf",
+    storageBucket: "puntos-app-4caaf.firebasestorage.app",
+    messagingSenderId: "902581122850",
+    appId: "1:902581122850:web:15c290df944079dcce977b",
+    measurementId: "G-9V5M42M93V"
+  };
+
+  // Inicializar Firebase solo si está disponible y aún no se ha inicializado.
+  if (typeof firebase !== 'undefined' && firebase.apps && firebase.apps.length === 0) {
+    firebase.initializeApp(firebaseConfig);
+    // Habilita la persistencia offline para Firestore. Esto hará que los
+    // cambios se sincronicen automáticamente cuando haya conexión.
+    firebase.firestore().enablePersistence().catch(() => {});
+  }
+  // Referencias a los servicios de Firebase
+  const auth = (typeof firebase !== 'undefined') ? firebase.auth() : null;
+  const db   = (typeof firebase !== 'undefined') ? firebase.firestore() : null;
+
   const DEFAULT_CATEGORIES = [
     { key:"cereales",   name:"Cereales",    color:"#b77a28", icon:"🌾", goal:5 },
     { key:"proteinas",  name:"Proteínas",   color:"#e85b5b", icon:"🥩", goal:7 },
@@ -54,7 +79,14 @@
   }
 
   function saveState(state){
+    // Guarda la información localmente y, si hay un usuario autenticado,
+    // sincroniza con Firestore. La sincronización remota ocurre en segundo plano
+    // y se mantendrá en cola si el dispositivo está offline gracias a la
+    // persistencia habilitada.
     localStorage.setItem(STORE_KEY, JSON.stringify(state));
+    if (auth && auth.currentUser && db) {
+      db.collection('users').doc(auth.currentUser.uid).set(state).catch(()=>{});
+    }
   }
 
   function initState(){
@@ -65,28 +97,12 @@
         mode: "remaining",
       },
       categories: DEFAULT_CATEGORIES.map(c => ({...c, equivFactor: 1})),
-      weights: {},
       days: {
         // iso: { used: {key:number}, history:[{key,delta,ts}] }
       }
     };
     saveState(base);
     return base;
-  }
-
-  function normalizeState(loaded){
-    if(!loaded || typeof loaded !== "object") return initState();
-    loaded.settings = loaded.settings ?? {};
-    if(typeof loaded.settings.totalGoal !== "number"){
-      loaded.settings.totalGoal = DEFAULT_CATEGORIES.reduce((a,c)=>a+c.goal, 0);
-    }
-    loaded.settings.mode = loaded.settings.mode ?? "remaining";
-    if(!Array.isArray(loaded.categories)){
-      loaded.categories = DEFAULT_CATEGORIES.map(c => ({...c, equivFactor: 1}));
-    }
-    if(!loaded.days || typeof loaded.days !== "object") loaded.days = {};
-    if(!loaded.weights || typeof loaded.weights !== "object") loaded.weights = {};
-    return loaded;
   }
 
   function getDay(state, iso){
@@ -158,14 +174,26 @@
   const copyExportBtn = $("#copyExportBtn");
   const importBtn = $("#importBtn");
 
-  // Weight progress
-  const weightInput = $("#weightInput");
-  const weightSaveBtn = $("#weightSaveBtn");
-  const weightDateLabel = $("#weightDateLabel");
-  const weightChart = $("#weightChart");
+  // Login screen elements for Firebase Auth
+  // These correspond to the login overlay defined in index.html. When a user
+  // is not authenticated the overlay will be shown to prompt for email
+  // and contraseña. When a user is authenticated, the overlay is hidden.
+  const loginScreen = $("#loginScreen");
+  const loginEmailInput = $("#loginEmail");
+  const loginPasswordInput = $("#loginPassword");
+  const loginBtn = $("#loginBtn");
+  const signupBtn = $("#signupBtn");
+
+  // Helper to show or hide the login overlay. When "visible" is true the
+  // overlay is shown (aria-hidden="false"); otherwise it is hidden. This
+  // function safely no-ops if the loginScreen element does not exist.
+  function toggleLoginScreen(visible) {
+    if (!loginScreen) return;
+    loginScreen.setAttribute("aria-hidden", visible ? "false" : "true");
+  }
 
   // App vars
-  let state = normalizeState(loadState());
+  let state = loadState() ?? initState();
   let currentISO = todayISO();
   let currentCatKey = null;
 
@@ -291,122 +319,6 @@
     totalGoalInput.value = state.settings.totalGoal;
 
     renderEquivGrid();
-    renderWeightSection();
-  }
-
-  function getWeightEntries(){
-    const entries = Object.entries(state.weights)
-      .filter(([, value]) => Number.isFinite(value))
-      .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, value]) => ({ date, value }));
-    const MAX_POINTS = 14;
-    return entries.slice(-MAX_POINTS);
-  }
-
-  function renderWeightChart(){
-    const entries = getWeightEntries();
-    const chartWrap = weightChart.closest(".progress-chart");
-    if(chartWrap){
-      chartWrap.classList.toggle("is-empty", entries.length < 2);
-    }
-    if(entries.length === 0){
-      const ctx = weightChart.getContext("2d");
-      ctx.clearRect(0, 0, weightChart.width, weightChart.height);
-      return;
-    }
-    const width = weightChart.clientWidth || 300;
-    const height = 180;
-    const dpr = window.devicePixelRatio || 1;
-    weightChart.width = width * dpr;
-    weightChart.height = height * dpr;
-    weightChart.style.width = `${width}px`;
-    weightChart.style.height = `${height}px`;
-
-    const ctx = weightChart.getContext("2d");
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, width, height);
-
-    const padding = { left: 34, right: 12, top: 16, bottom: 26 };
-    const plotW = width - padding.left - padding.right;
-    const plotH = height - padding.top - padding.bottom;
-    const values = entries.map(e => e.value);
-    let min = Math.min(...values);
-    let max = Math.max(...values);
-    if(min === max){
-      min -= 1;
-      max += 1;
-    }
-    const range = max - min;
-
-    ctx.strokeStyle = "rgba(0,0,0,0.12)";
-    ctx.lineWidth = 1;
-    for(let i=0; i<=2; i++){
-      const y = padding.top + (plotH/2) * i;
-      ctx.beginPath();
-      ctx.moveTo(padding.left, y);
-      ctx.lineTo(width - padding.right, y);
-      ctx.stroke();
-    }
-
-    const xFor = (i) => padding.left + (plotW * (entries.length === 1 ? 0 : i / (entries.length - 1)));
-    const yFor = (v) => padding.top + ((max - v) / range) * plotH;
-
-    ctx.strokeStyle = "#8b2b2b";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    entries.forEach((entry, idx) => {
-      const x = xFor(idx);
-      const y = yFor(entry.value);
-      if(idx === 0) ctx.moveTo(x, y);
-      else ctx.lineTo(x, y);
-    });
-    ctx.stroke();
-
-    ctx.fillStyle = "#8b2b2b";
-    entries.forEach((entry, idx) => {
-      const x = xFor(idx);
-      const y = yFor(entry.value);
-      ctx.beginPath();
-      ctx.arc(x, y, 3.6, 0, Math.PI * 2);
-      ctx.fill();
-    });
-
-    ctx.fillStyle = "rgba(0,0,0,0.6)";
-    ctx.font = "12px var(--font)";
-    ctx.fillText(`${max.toFixed(1)} kg`, 6, padding.top + 6);
-    ctx.fillText(`${min.toFixed(1)} kg`, 6, height - padding.bottom + 12);
-
-    const first = entries[0]?.date;
-    const last = entries[entries.length - 1]?.date;
-    if(first && last){
-      const firstLabel = first.slice(5).replace("-", "/");
-      const lastLabel = last.slice(5).replace("-", "/");
-      ctx.fillText(firstLabel, padding.left, height - 6);
-      ctx.fillText(lastLabel, width - padding.right - ctx.measureText(lastLabel).width, height - 6);
-    }
-  }
-
-  function renderWeightSection(){
-    const label = (currentISO === todayISO()) ? "Peso de hoy" : `Peso de ${formatDayTitle(currentISO)}`;
-    weightDateLabel.textContent = label;
-    const value = state.weights[currentISO];
-    weightInput.value = Number.isFinite(value) ? value : "";
-    renderWeightChart();
-  }
-
-  function saveWeight(){
-    const raw = weightInput.value.trim();
-    if(raw === ""){
-      delete state.weights[currentISO];
-      saveState(state);
-      renderWeightSection();
-      return;
-    }
-    const val = parseNumber(raw);
-    if(!Number.isFinite(val) || val <= 0) return;
-    state.weights[currentISO] = round1(val);
-    saveState(state);
-    renderWeightSection();
   }
 
   function openCategory(key){
@@ -579,14 +491,6 @@
     closeModal(goalModal);
   });
 
-  weightSaveBtn.addEventListener("click", saveWeight);
-  weightInput.addEventListener("keydown", (e) => {
-    if(e.key === "Enter"){
-      e.preventDefault();
-      saveWeight();
-    }
-  });
-
   autoFromCatsBtn.addEventListener("click", () => {
     const sum = state.categories.reduce((a,c)=>a + (c.goal ?? 0), 0);
     totalGoalInput.value = round1(sum);
@@ -648,10 +552,6 @@
     render();
   });
 
-  window.addEventListener("resize", () => {
-    renderWeightChart();
-  });
-
   // Info button quick help
   $("#infoBtn").addEventListener("click", () => {
     alert("Tip iPhone: abre esto en Safari y toca Compartir → “Agregar a pantalla de inicio” para usarlo como app.");
@@ -674,6 +574,76 @@
     window.addEventListener("load", () => {
       navigator.serviceWorker.register("sw.js").catch(()=>{});
     });
+  }
+
+  // Setup Firebase Authentication login/signup listeners and sync remote state.
+  // These handlers enable users to log in with email/contraseña or crear una
+  // nueva cuenta. The login overlay will be shown when no user is signed
+  // in and hidden when a user is authenticated. When authenticated we
+  // attempt to load the user's state from Firestore and persist it
+  // to localStorage for offline use. Saving of state via saveState()
+  // automatically syncs to Firestore when online.
+  if (auth) {
+    // Sign in with email and password
+    loginBtn?.addEventListener("click", async () => {
+      const email = loginEmailInput?.value?.trim();
+      const pass  = loginPasswordInput?.value ?? "";
+      if (!email || !pass) {
+        alert("Por favor introduce tu email y contraseña.");
+        return;
+      }
+      try {
+        await auth.signInWithEmailAndPassword(email, pass);
+      } catch (err) {
+        alert("No se pudo iniciar sesión: " + (err?.message || err));
+      }
+    });
+    // Register a new account
+    signupBtn?.addEventListener("click", async () => {
+      const email = loginEmailInput?.value?.trim();
+      const pass  = loginPasswordInput?.value ?? "";
+      if (!email || !pass) {
+        alert("Por favor introduce tu email y contraseña.");
+        return;
+      }
+      try {
+        await auth.createUserWithEmailAndPassword(email, pass);
+        alert("Cuenta creada. Ya puedes comenzar a usar la app.");
+      } catch (err) {
+        alert("No se pudo crear la cuenta: " + (err?.message || err));
+      }
+    });
+    // Observe auth state changes
+    auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        // hide login overlay
+        toggleLoginScreen(false);
+        // Load state from Firestore
+        if (db) {
+          try {
+            const doc = await db.collection("users").doc(user.uid).get();
+            if (doc && doc.exists) {
+              const remoteState = doc.data();
+              if (remoteState && remoteState.categories && remoteState.days && remoteState.settings) {
+                state = remoteState;
+                // persist to localStorage
+                localStorage.setItem(STORE_KEY, JSON.stringify(state));
+              }
+            }
+          } catch (_ignored) {
+            // ignore Firestore errors
+          }
+        }
+        // re-render with potentially updated state
+        render();
+      } else {
+        // no user: show login overlay
+        toggleLoginScreen(true);
+      }
+    });
+
+    // Initially show login overlay until auth state determines otherwise.
+    toggleLoginScreen(true);
   }
 
   // First render
