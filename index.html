@@ -54,6 +54,32 @@
       </section>
 
       <section class="grid" id="grid"></section>
+
+      <section class="progress-card" aria-labelledby="weightTitle">
+        <div class="progress-head">
+          <div>
+            <h2 id="weightTitle">Progreso en kg</h2>
+            <p class="progress-sub" id="weightDateLabel">Peso del día</p>
+          </div>
+          <span class="progress-badge">kg</span>
+        </div>
+
+        <div class="progress-form">
+          <label class="field">
+            <span>Peso de hoy</span>
+            <input id="weightInput" inputmode="decimal" placeholder="Ej. 72.4" />
+          </label>
+          <div class="custom-actions">
+            <button class="btn primary" id="weightSaveBtn" type="button">Guardar peso</button>
+          </div>
+          <div class="hint">Deja el campo vacío y guarda para borrar el peso de ese día.</div>
+        </div>
+
+        <div class="progress-chart">
+          <canvas id="weightChart" aria-label="Gráfica de progreso de peso" role="img"></canvas>
+          <div class="progress-empty" id="weightEmpty">Registra al menos 2 días para ver la gráfica.</div>
+        </div>
+      </section>
     </main>
 
     <!-- Drawer -->

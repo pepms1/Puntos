@@ -65,12 +65,28 @@
         mode: "remaining",
       },
       categories: DEFAULT_CATEGORIES.map(c => ({...c, equivFactor: 1})),
+      weights: {},
       days: {
         // iso: { used: {key:number}, history:[{key,delta,ts}] }
       }
     };
     saveState(base);
     return base;
+  }
+
+  function normalizeState(loaded){
+    if(!loaded || typeof loaded !== "object") return initState();
+    loaded.settings = loaded.settings ?? {};
+    if(typeof loaded.settings.totalGoal !== "number"){
+      loaded.settings.totalGoal = DEFAULT_CATEGORIES.reduce((a,c)=>a+c.goal, 0);
+    }
+    loaded.settings.mode = loaded.settings.mode ?? "remaining";
+    if(!Array.isArray(loaded.categories)){
+      loaded.categories = DEFAULT_CATEGORIES.map(c => ({...c, equivFactor: 1}));
+    }
+    if(!loaded.days || typeof loaded.days !== "object") loaded.days = {};
+    if(!loaded.weights || typeof loaded.weights !== "object") loaded.weights = {};
+    return loaded;
   }
 
   function getDay(state, iso){
@@ -142,8 +158,14 @@
   const copyExportBtn = $("#copyExportBtn");
   const importBtn = $("#importBtn");
 
+  // Weight progress
+  const weightInput = $("#weightInput");
+  const weightSaveBtn = $("#weightSaveBtn");
+  const weightDateLabel = $("#weightDateLabel");
+  const weightChart = $("#weightChart");
+
   // App vars
-  let state = loadState() ?? initState();
+  let state = normalizeState(loadState());
   let currentISO = todayISO();
   let currentCatKey = null;
 
@@ -269,6 +291,122 @@
     totalGoalInput.value = state.settings.totalGoal;
 
     renderEquivGrid();
+    renderWeightSection();
+  }
+
+  function getWeightEntries(){
+    const entries = Object.entries(state.weights)
+      .filter(([, value]) => Number.isFinite(value))
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, value]) => ({ date, value }));
+    const MAX_POINTS = 14;
+    return entries.slice(-MAX_POINTS);
+  }
+
+  function renderWeightChart(){
+    const entries = getWeightEntries();
+    const chartWrap = weightChart.closest(".progress-chart");
+    if(chartWrap){
+      chartWrap.classList.toggle("is-empty", entries.length < 2);
+    }
+    if(entries.length === 0){
+      const ctx = weightChart.getContext("2d");
+      ctx.clearRect(0, 0, weightChart.width, weightChart.height);
+      return;
+    }
+    const width = weightChart.clientWidth || 300;
+    const height = 180;
+    const dpr = window.devicePixelRatio || 1;
+    weightChart.width = width * dpr;
+    weightChart.height = height * dpr;
+    weightChart.style.width = `${width}px`;
+    weightChart.style.height = `${height}px`;
+
+    const ctx = weightChart.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, width, height);
+
+    const padding = { left: 34, right: 12, top: 16, bottom: 26 };
+    const plotW = width - padding.left - padding.right;
+    const plotH = height - padding.top - padding.bottom;
+    const values = entries.map(e => e.value);
+    let min = Math.min(...values);
+    let max = Math.max(...values);
+    if(min === max){
+      min -= 1;
+      max += 1;
+    }
+    const range = max - min;
+
+    ctx.strokeStyle = "rgba(0,0,0,0.12)";
+    ctx.lineWidth = 1;
+    for(let i=0; i<=2; i++){
+      const y = padding.top + (plotH/2) * i;
+      ctx.beginPath();
+      ctx.moveTo(padding.left, y);
+      ctx.lineTo(width - padding.right, y);
+      ctx.stroke();
+    }
+
+    const xFor = (i) => padding.left + (plotW * (entries.length === 1 ? 0 : i / (entries.length - 1)));
+    const yFor = (v) => padding.top + ((max - v) / range) * plotH;
+
+    ctx.strokeStyle = "#8b2b2b";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    entries.forEach((entry, idx) => {
+      const x = xFor(idx);
+      const y = yFor(entry.value);
+      if(idx === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    ctx.fillStyle = "#8b2b2b";
+    entries.forEach((entry, idx) => {
+      const x = xFor(idx);
+      const y = yFor(entry.value);
+      ctx.beginPath();
+      ctx.arc(x, y, 3.6, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    ctx.fillStyle = "rgba(0,0,0,0.6)";
+    ctx.font = "12px var(--font)";
+    ctx.fillText(`${max.toFixed(1)} kg`, 6, padding.top + 6);
+    ctx.fillText(`${min.toFixed(1)} kg`, 6, height - padding.bottom + 12);
+
+    const first = entries[0]?.date;
+    const last = entries[entries.length - 1]?.date;
+    if(first && last){
+      const firstLabel = first.slice(5).replace("-", "/");
+      const lastLabel = last.slice(5).replace("-", "/");
+      ctx.fillText(firstLabel, padding.left, height - 6);
+      ctx.fillText(lastLabel, width - padding.right - ctx.measureText(lastLabel).width, height - 6);
+    }
+  }
+
+  function renderWeightSection(){
+    const label = (currentISO === todayISO()) ? "Peso de hoy" : `Peso de ${formatDayTitle(currentISO)}`;
+    weightDateLabel.textContent = label;
+    const value = state.weights[currentISO];
+    weightInput.value = Number.isFinite(value) ? value : "";
+    renderWeightChart();
+  }
+
+  function saveWeight(){
+    const raw = weightInput.value.trim();
+    if(raw === ""){
+      delete state.weights[currentISO];
+      saveState(state);
+      renderWeightSection();
+      return;
+    }
+    const val = parseNumber(raw);
+    if(!Number.isFinite(val) || val <= 0) return;
+    state.weights[currentISO] = round1(val);
+    saveState(state);
+    renderWeightSection();
   }
 
   function openCategory(key){
@@ -441,6 +579,14 @@
     closeModal(goalModal);
   });
 
+  weightSaveBtn.addEventListener("click", saveWeight);
+  weightInput.addEventListener("keydown", (e) => {
+    if(e.key === "Enter"){
+      e.preventDefault();
+      saveWeight();
+    }
+  });
+
   autoFromCatsBtn.addEventListener("click", () => {
     const sum = state.categories.reduce((a,c)=>a + (c.goal ?? 0), 0);
     totalGoalInput.value = round1(sum);
@@ -500,6 +646,10 @@
   datePicker.addEventListener("change", () => {
     if(datePicker.value) currentISO = datePicker.value;
     render();
+  });
+
+  window.addEventListener("resize", () => {
+    renderWeightChart();
   });
 
   // Info button quick help
