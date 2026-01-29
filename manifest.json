@@ -1,6 +1,6 @@
 {
-  "name": "Puntos Dieta",
-  "short_name": "Puntos",
+  "name": "PMSALUD",
+  "short_name": "PMSALUD",
   "start_url": "./index.html",
   "display": "standalone",
   "background_color": "#f7f3ee",
