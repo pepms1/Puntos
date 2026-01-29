@@ -96,7 +96,7 @@
         totalGoal: DEFAULT_CATEGORIES.reduce((a,c)=>a+c.goal, 0),
         mode: "remaining",
       },
-      categories: DEFAULT_CATEGORIES.map(c => ({...c, equivFactor: 1})),
+      categories: DEFAULT_CATEGORIES.map(c => ({...c})),
       days: {
         // iso: { used: {key:number}, history:[{key,delta,ts}] }
       }
@@ -107,9 +107,12 @@
 
   function getDay(state, iso){
     if(!state.days[iso]){
-      state.days[iso] = { used:{}, history:[] };
+      state.days[iso] = { used:{}, history:[], weight: null };
       for(const c of state.categories) state.days[iso].used[c.key] = 0;
       saveState(state);
+    }
+    if(state.days[iso].weight === undefined){
+      state.days[iso].weight = null;
     }
     return state.days[iso];
   }
@@ -165,7 +168,12 @@
   const totalGoalInput = $("#totalGoalInput");
   const saveTotalGoalBtn = $("#saveTotalGoalBtn");
   const autoFromCatsBtn = $("#autoFromCatsBtn");
-  const equivGrid = $("#equivGrid");
+  const weightInput = $("#weightInput");
+  const saveWeightBtn = $("#saveWeightBtn");
+  const weightValue = $("#weightValue");
+  const weightChart = $("#weightChart");
+  const weightChartEmpty = $("#weightChartEmpty");
+  const weightLabels = $("#weightLabels");
 
   // Export modal
   const exportModal = $("#exportModal");
@@ -212,6 +220,7 @@
   }
 
   function setMode(mode){
+    if(!["remaining", "used"].includes(mode)) return;
     state.settings.mode = mode;
     saveState(state);
     tabs.forEach(t => {
@@ -252,11 +261,6 @@
     }else if(mode === "used"){
       pillText = round1(used).toFixed(1);
       sub = "Usados";
-    }else{
-      const factor = (c.equivFactor ?? 1) || 1;
-      const equiv = used / factor;
-      pillText = round1(equiv).toFixed(1);
-      sub = "Equiv.";
     }
 
     const frac = c.goal <= 0 ? 0 : clamp((mode==="remaining" ? rem : used) / c.goal, 0, 1);
@@ -283,25 +287,79 @@
     return el;
   }
 
-  function renderEquivGrid(){
-    equivGrid.innerHTML = "";
-    for(const c of state.categories){
-      const item = document.createElement("div");
-      item.className = "equiv-item";
-      item.innerHTML = `
-        <div class="name">${c.name}</div>
-        <label class="field">
-          <span>Factor (puntos por porción)</span>
-          <input inputmode="decimal" data-equiv="${c.key}" value="${(c.equivFactor ?? 1)}" />
-        </label>
-      `;
-      equivGrid.appendChild(item);
+  function getRecentWeightData(){
+    const days = [];
+    for(let i = 6; i >= 0; i -= 1){
+      const iso = addDaysISO(currentISO, -i);
+      const day = state.days[iso];
+      const weight = Number.isFinite(day?.weight) ? day.weight : null;
+      days.push({ iso, weight });
     }
+    return days;
+  }
+
+  function renderWeightChart(){
+    if(!weightChart || !weightValue || !weightInput || !weightLabels) return;
+    const day = getDay(state, currentISO);
+    const weight = Number.isFinite(day.weight) ? day.weight : null;
+    weightValue.textContent = weight ? `${weight.toFixed(1)} kg` : "Sin registro";
+    weightInput.value = weight ? weight.toFixed(1) : "";
+
+    const data = getRecentWeightData();
+    const weights = data.map(d => d.weight).filter(v => Number.isFinite(v));
+    weightChart.innerHTML = "";
+    weightLabels.innerHTML = "";
+
+    data.forEach(d => {
+      const label = document.createElement("span");
+      label.textContent = new Date(d.iso + "T12:00:00").toLocaleDateString("es-MX", { weekday: "short" });
+      weightLabels.appendChild(label);
+    });
+
+    if(weights.length === 0){
+      weightChartEmpty?.classList.remove("hidden");
+      return;
+    }
+    weightChartEmpty?.classList.add("hidden");
+
+    const width = 320;
+    const height = 120;
+    const padding = 14;
+    const min = Math.min(...weights);
+    const max = Math.max(...weights);
+    const range = Math.max(1, max - min);
+    const step = data.length > 1 ? (width - padding * 2) / (data.length - 1) : 0;
+
+    let path = "";
+    const circles = [];
+    data.forEach((d, idx) => {
+      if(!Number.isFinite(d.weight)) return;
+      const x = padding + step * idx;
+      const y = padding + ((max - d.weight) / range) * (height - padding * 2);
+      path += path ? ` L ${x} ${y}` : `M ${x} ${y}`;
+      circles.push(`<circle cx="${x}" cy="${y}" r="3.5" />`);
+    });
+
+    weightChart.innerHTML = `
+      <rect x="0" y="0" width="${width}" height="${height}" rx="14" ry="14"></rect>
+      <path d="${path}" />
+      ${circles.join("")}
+    `;
   }
 
   function render(){
     const day = getDay(state, currentISO);
     const { usedTotal, remaining } = getTotals(day);
+
+    if(!["remaining", "used"].includes(state.settings.mode)){
+      state.settings.mode = "remaining";
+      saveState(state);
+    }
+    tabs.forEach(t => {
+      const active = t.dataset.mode === state.settings.mode;
+      t.classList.toggle("active", active);
+      t.setAttribute("aria-selected", active ? "true":"false");
+    });
 
     // Title
     dayTitleBtn.textContent = (currentISO === todayISO()) ? "Hoy" : formatDayTitle(currentISO);
@@ -318,7 +376,7 @@
     // Keep goal input aligned if goal modal open
     totalGoalInput.value = state.settings.totalGoal;
 
-    renderEquivGrid();
+    renderWeightChart();
   }
 
   function openCategory(key){
@@ -471,7 +529,6 @@
   // Goal modal open
   editGoalBtn.addEventListener("click", () => {
     totalGoalInput.value = state.settings.totalGoal;
-    renderEquivGrid();
     openModal(goalModal);
   });
 
@@ -479,13 +536,6 @@
     const val = parseNumber(totalGoalInput.value);
     if(!Number.isFinite(val) || val<0) return;
     state.settings.totalGoal = round1(val);
-    // Update equiv factors from grid
-    $$("input[data-equiv]").forEach(inp => {
-      const k = inp.dataset.equiv;
-      const n = parseNumber(inp.value);
-      const cat = state.categories.find(c=>c.key===k);
-      if(cat) cat.equivFactor = (Number.isFinite(n) && n>0) ? n : 1;
-    });
     saveState(state);
     render();
     closeModal(goalModal);
@@ -514,6 +564,16 @@
   aboutBtn.addEventListener("click", () => {
     setDrawer(false);
     alert("Puntos Dieta – web app offline\n\n• Toca una categoría para sumar puntos\n• Cambia el modo con las pestañas\n• Todo se guarda localmente");
+  });
+
+  // Weight tracking
+  saveWeightBtn?.addEventListener("click", () => {
+    const val = parseNumber(weightInput?.value ?? "");
+    if(!Number.isFinite(val) || val <= 0) return;
+    const day = getDay(state, currentISO);
+    day.weight = round1(val);
+    saveState(state);
+    renderWeightChart();
   });
 
   // Export copy/import
@@ -555,18 +615,6 @@
   // Info button quick help
   $("#infoBtn").addEventListener("click", () => {
     alert("Tip iPhone: abre esto en Safari y toca Compartir → “Agregar a pantalla de inicio” para usarlo como app.");
-  });
-
-  // Save equiv factors live when typing (optional)
-  document.addEventListener("input", (e) => {
-    const inp = e.target;
-    if(inp && inp.matches("input[data-equiv]")){
-      const k = inp.dataset.equiv;
-      const n = parseNumber(inp.value);
-      const cat = state.categories.find(c=>c.key===k);
-      if(cat) cat.equivFactor = (Number.isFinite(n) && n>0) ? n : 1;
-      saveState(state);
-    }
   });
 
   // Service worker (offline)
@@ -639,6 +687,20 @@
       } else {
         // no user: show login overlay
         toggleLoginScreen(true);
+      }
+    });
+
+    $("#logoutBtn")?.addEventListener("click", async () => {
+      setDrawer(false);
+      if (!auth.currentUser) {
+        alert("No hay sesión activa.");
+        return;
+      }
+      if (!confirm("¿Cerrar sesión?")) return;
+      try {
+        await auth.signOut();
+      } catch (err) {
+        alert("No se pudo cerrar sesión: " + (err?.message || err));
       }
     });
 
