@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#f7f3ee" />
+  <title>Puntos Dieta</title>
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <button class="icon-btn" id="menuBtn" aria-label="Menú">
+        <span class="icon">☰</span>
+      </button>
+
+      <div class="brand">
+        <div class="brand-top">AM<span class="brand-light">SALUD</span></div>
+        <div class="brand-flourish" aria-hidden="true">❦</div>
+      </div>
+
+      <button class="icon-btn" id="infoBtn" aria-label="Info">
+        <span class="icon">i</span>
+      </button>
+    </header>
+
+    <main class="content">
+      <section class="hero">
+        <div class="wood-card">
+          <div class="dayrow">
+            <button class="daylink" id="prevDayBtn">‹ Ayer</button>
+            <button class="daytitle" id="dayTitle" title="Cambiar fecha"></button>
+            <button class="daylink" id="nextDayBtn">Mañana ›</button>
+          </div>
+
+          <div class="big-gauge" id="bigGauge" role="img" aria-label="Puntos restantes">
+            <div class="big-gauge-inner">
+              <div class="big-number" id="remainingTotal">0</div>
+              <div class="big-label" id="bigLabel">Puntos restantes</div>
+              <button class="small-btn" id="editGoalBtn" type="button">Editar meta</button>
+            </div>
+          </div>
+
+          <div class="tabs" role="tablist" aria-label="Modo de vista">
+            <button class="tab active" data-mode="remaining" role="tab" aria-selected="true">Puntos</button>
+            <button class="tab" data-mode="used" role="tab" aria-selected="false">Usados</button>
+            <button class="tab" data-mode="equiv" role="tab" aria-selected="false">Equivalentes</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="grid" id="grid"></section>
+    </main>
+
+    <!-- Drawer -->
+    <aside class="drawer" id="drawer" aria-hidden="true">
+      <div class="drawer-scrim" id="drawerScrim"></div>
+      <div class="drawer-panel" role="dialog" aria-modal="true" aria-label="Menú">
+        <div class="drawer-header">
+          <div class="drawer-title">Opciones</div>
+          <button class="icon-btn" id="drawerCloseBtn" aria-label="Cerrar">✕</button>
+        </div>
+        <div class="drawer-body">
+          <button class="list-btn" id="resetDayBtn">Reiniciar día</button>
+          <button class="list-btn" id="exportBtn">Exportar / Importar</button>
+          <button class="list-btn" id="aboutBtn">Acerca de</button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Modal: Category -->
+    <div class="modal" id="catModal" aria-hidden="true">
+      <div class="modal-scrim" data-close="1"></div>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-label="Editar puntos">
+        <div class="modal-head">
+          <div class="modal-title" id="modalTitle">Categoría</div>
+          <button class="icon-btn" id="modalCloseBtn" aria-label="Cerrar">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="statrow">
+            <div class="stat">
+              <div class="stat-label">Meta</div>
+              <div class="stat-value" id="modalGoal">0</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Usados</div>
+              <div class="stat-value" id="modalUsed">0</div>
+            </div>
+            <div class="stat">
+              <div class="stat-label">Restantes</div>
+              <div class="stat-value" id="modalRem">0</div>
+            </div>
+          </div>
+
+          <div class="quick">
+            <div class="quick-title">¿Cuántos puntos comiste?</div>
+            <div class="quick-grid">
+              <button class="chip" data-add="0.5">+0.5</button>
+              <button class="chip" data-add="1">+1</button>
+              <button class="chip" data-add="2">+2</button>
+              <button class="chip" data-add="3">+3</button>
+            </div>
+
+            <div class="custom">
+              <label class="field">
+                <span>Personalizado</span>
+                <input id="customInput" inputmode="decimal" placeholder="Ej. 1.5" />
+              </label>
+              <div class="custom-actions">
+                <button class="btn primary" id="addCustomBtn">Sumar</button>
+                <button class="btn" id="subCustomBtn">Restar</button>
+              </div>
+            </div>
+
+            <div class="undo-row">
+              <button class="btn danger" id="undoBtn">Deshacer último</button>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+
+          <div class="edit-goal">
+            <div class="quick-title">Ajustar meta de esta categoría</div>
+            <div class="custom">
+              <label class="field">
+                <span>Nueva meta</span>
+                <input id="goalInput" inputmode="decimal" placeholder="Ej. 6" />
+              </label>
+              <div class="custom-actions">
+                <button class="btn" id="saveGoalBtn">Guardar meta</button>
+              </div>
+              <div class="hint">Tip: también puedes editar la meta total desde “Editar meta”.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Goal -->
+    <div class="modal" id="goalModal" aria-hidden="true">
+      <div class="modal-scrim" data-close="1"></div>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-label="Editar meta total">
+        <div class="modal-head">
+          <div class="modal-title">Meta total de puntos</div>
+          <button class="icon-btn" id="goalCloseBtn" aria-label="Cerrar">✕</button>
+        </div>
+        <div class="modal-body">
+          <p class="p">Define cuántos puntos totales tienes para el día. El medidor superior usa esta cifra.</p>
+          <label class="field">
+            <span>Meta total</span>
+            <input id="totalGoalInput" inputmode="decimal" placeholder="Ej. 22" />
+          </label>
+
+          <div class="custom-actions">
+            <button class="btn primary" id="saveTotalGoalBtn">Guardar</button>
+            <button class="btn" id="autoFromCatsBtn">Calcular desde categorías</button>
+          </div>
+
+          <div class="divider"></div>
+
+          <p class="p">Opcional: redefine los factores para “Equivalentes” (porciones). Si un punto equivale a 1 porción, deja 1.</p>
+          <div class="equiv-grid" id="equivGrid"></div>
+
+          <div class="hint">Todo se guarda en tu iPhone (localStorage). No se sube a ningún servidor.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal: Export -->
+    <div class="modal" id="exportModal" aria-hidden="true">
+      <div class="modal-scrim" data-close="1"></div>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-label="Exportar o importar">
+        <div class="modal-head">
+          <div class="modal-title">Exportar / Importar</div>
+          <button class="icon-btn" id="exportCloseBtn" aria-label="Cerrar">✕</button>
+        </div>
+        <div class="modal-body">
+          <p class="p">Copia/pega este JSON para respaldar tu información o moverla a otro iPhone.</p>
+          <textarea id="exportArea" spellcheck="false"></textarea>
+          <div class="custom-actions">
+            <button class="btn" id="copyExportBtn">Copiar</button>
+            <button class="btn primary" id="importBtn">Importar (reemplaza)</button>
+          </div>
+          <div class="hint">Si importas, se reemplaza todo lo que tienes guardado.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Date picker (hidden) -->
+    <input type="date" id="datePicker" class="date-picker" />
+
+    <footer class="footer-safe"></footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
