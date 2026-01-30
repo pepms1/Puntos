@@ -672,6 +672,46 @@
   // attempt to load the user's state from Firestore and persist it
   // to localStorage for offline use. Saving of state via saveState()
   // automatically syncs to Firestore when online.
+  const handleLogin = async () => {
+    if (!auth) {
+      alert("El servicio de inicio de sesión no está disponible todavía.");
+      return;
+    }
+    const email = loginEmailInput?.value?.trim();
+    const pass  = loginPasswordInput?.value ?? "";
+    if (!email || !pass) {
+      alert("Por favor introduce tu email y contraseña.");
+      return;
+    }
+    try {
+      await auth.signInWithEmailAndPassword(email, pass);
+    } catch (err) {
+      alert("No se pudo iniciar sesión: " + (err?.message || err));
+    }
+  };
+
+  const handleSignup = async () => {
+    if (!auth) {
+      alert("El servicio de creación de cuenta no está disponible todavía.");
+      return;
+    }
+    const email = loginEmailInput?.value?.trim();
+    const pass  = loginPasswordInput?.value ?? "";
+    if (!email || !pass) {
+      alert("Por favor introduce tu email y contraseña.");
+      return;
+    }
+    try {
+      await auth.createUserWithEmailAndPassword(email, pass);
+      alert("Cuenta creada. Ya puedes comenzar a usar la app.");
+    } catch (err) {
+      alert("No se pudo crear la cuenta: " + (err?.message || err));
+    }
+  };
+
+  loginBtn?.addEventListener("click", handleLogin);
+  signupBtn?.addEventListener("click", handleSignup);
+
   if (auth) {
     let unsubscribeUserDoc = null;
     // Sign in with email and password
