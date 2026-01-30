@@ -206,6 +206,8 @@
   const loginEmailInput = $("#loginEmail");
   const loginPasswordInput = $("#loginPassword");
   const loginBtn = $("#loginBtn");
+  const loginStatus = $("#loginStatus");
+  const loginLink = $("#loginLink");
 
   // Helper to show or hide the login overlay. When "visible" is true the
   // overlay is shown (aria-hidden="false"); otherwise it is hidden. This
@@ -682,11 +684,28 @@
       await auth.signInWithEmailAndPassword(email, pass);
       setLoginStatus("Sesión iniciada.", "success");
     } catch (err) {
-      alert("No se pudo iniciar sesión: " + (err?.message || err));
+      const message = "No se pudo iniciar sesión: " + (err?.message || err);
+      setLoginStatus(message, "error");
+      alert(message);
+    } finally {
+      if (loginBtn) loginBtn.disabled = false;
     }
   };
 
   loginBtn?.addEventListener("click", handleLogin);
+  loginLink?.addEventListener("click", handleLogin);
+  loginPasswordInput?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      handleLogin();
+    }
+  });
+  loginEmailInput?.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      handleLogin();
+    }
+  });
 
   if (auth) {
     let unsubscribeUserDoc = null;
