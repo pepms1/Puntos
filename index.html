@@ -47,19 +47,39 @@
             <div class="big-gauge-inner">
               <div class="big-number" id="remainingTotal">0</div>
               <div class="big-label" id="bigLabel">Puntos restantes</div>
-              <button class="small-btn" id="editGoalBtn" type="button">Editar meta</button>
             </div>
           </div>
 
           <div class="tabs" role="tablist" aria-label="Modo de vista">
             <button class="tab active" data-mode="remaining" role="tab" aria-selected="true">Puntos</button>
             <button class="tab" data-mode="used" role="tab" aria-selected="false">Usados</button>
-            <button class="tab" data-mode="equiv" role="tab" aria-selected="false">Equivalentes</button>
           </div>
         </div>
       </section>
 
       <section class="grid" id="grid"></section>
+
+      <section class="weight-section">
+        <div class="wood-card">
+          <div class="weight-header">
+            <div>
+              <div class="weight-title">Peso del día</div>
+              <div class="weight-subtitle" id="weightValue">Sin registro</div>
+            </div>
+            <div class="weight-input">
+              <label class="field">
+                <span>Hoy (kg)</span>
+                <input id="weightInput" inputmode="decimal" placeholder="Ej. 72.5" />
+              </label>
+              <button class="btn primary" id="saveWeightBtn" type="button">Guardar peso</button>
+            </div>
+          </div>
+          <div class="weight-chart">
+            <div class="weight-empty" id="weightChartEmpty">Agrega tu peso para ver la gráfica diaria.</div>
+            <svg id="weightChart" viewBox="0 0 320 120" aria-label="Gráfica de peso por día" role="img"></svg>
+          </div>
+        </div>
+      </section>
     </main>
 
     <!-- Drawer -->
@@ -73,6 +93,7 @@
         <div class="drawer-body">
           <button class="list-btn" id="resetDayBtn">Reiniciar día</button>
           <button class="list-btn" id="exportBtn">Exportar / Importar</button>
+          <button class="list-btn danger" id="logoutBtn">Cerrar sesión</button>
           <button class="list-btn" id="aboutBtn">Acerca de</button>
         </div>
       </div>
@@ -166,11 +187,6 @@
             <button class="btn" id="autoFromCatsBtn">Calcular desde categorías</button>
           </div>
 
-          <div class="divider"></div>
-
-          <p class="p">Opcional: redefine los factores para “Equivalentes” (porciones). Si un punto equivale a 1 porción, deja 1.</p>
-          <div class="equiv-grid" id="equivGrid"></div>
-
           <div class="hint">Todo se guarda en tu iPhone (localStorage). No se sube a ningún servidor.</div>
         </div>
       </div>
@@ -203,7 +219,7 @@
   </div>
 
   <!-- Login screen overlay. Visible when the user is not authenticated. -->
-  <div class="login-screen" id="loginScreen" aria-hidden="true">
+  <div class="login-screen" id="loginScreen" aria-hidden="false">
     <div class="login-card">
       <h2>Iniciar sesión</h2>
       <label class="field">
