@@ -33,6 +33,11 @@
   // Referencias a los servicios de Firebase
   const auth = (typeof firebase !== 'undefined') ? firebase.auth() : null;
   const db   = (typeof firebase !== 'undefined') ? firebase.firestore() : null;
+  if (auth?.setPersistence && typeof firebase !== "undefined") {
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {
+      auth.setPersistence(firebase.auth.Auth.Persistence.SESSION).catch(() => {});
+    });
+  }
 
   const DEFAULT_CATEGORIES = [
     { key:"cereales",   name:"Cereales",    color:"#b77a28", icon:"🌾", goal:5 },
@@ -68,12 +73,21 @@
 
   const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
+  function showStorageWarning(message) {
+    const statusEl = document.querySelector("#loginStatus");
+    if (!statusEl) return;
+    statusEl.textContent = message;
+    statusEl.dataset.state = "error";
+    statusEl.classList.remove("hidden");
+  }
+
   function loadState(){
     try{
       const raw = localStorage.getItem(STORE_KEY);
       if(!raw) return null;
       return JSON.parse(raw);
     }catch(e){
+      showStorageWarning("Tu navegador está bloqueando el almacenamiento. Revisa la configuración de cookies.");
       return null;
     }
   }
@@ -85,7 +99,11 @@
       db.collection('users').doc(auth.currentUser.uid).set(state).catch(()=>{});
       return;
     }
-    localStorage.setItem(STORE_KEY, JSON.stringify(state));
+    try{
+      localStorage.setItem(STORE_KEY, JSON.stringify(state));
+    }catch(e){
+      showStorageWarning("Tu navegador está bloqueando el almacenamiento. Revisa la configuración de cookies.");
+    }
   }
 
   function initState(){
@@ -188,7 +206,7 @@
   const loginEmailInput = $("#loginEmail");
   const loginPasswordInput = $("#loginPassword");
   const loginBtn = $("#loginBtn");
-  const signupBtn = $("#signupBtn");
+  const loginStatus = $("#loginStatus");
 
   // Helper to show or hide the login overlay. When "visible" is true the
   // overlay is shown (aria-hidden="false"); otherwise it is hidden. This
@@ -198,8 +216,31 @@
     loginScreen.setAttribute("aria-hidden", visible ? "false" : "true");
   }
 
+  function setLoginStatus(message, state = "info") {
+    if (!loginStatus) return;
+    if (!message) {
+      loginStatus.textContent = "";
+      loginStatus.classList.add("hidden");
+      loginStatus.removeAttribute("data-state");
+      return;
+    }
+    loginStatus.textContent = message;
+    loginStatus.dataset.state = state;
+    loginStatus.classList.remove("hidden");
+  }
+
+  window.addEventListener("error", (event) => {
+    const message = event?.message || "Error inesperado al cargar la app.";
+    setLoginStatus(message, "error");
+  });
+  window.addEventListener("unhandledrejection", (event) => {
+    const reason = event?.reason?.message || event?.reason || "Error inesperado al iniciar sesión.";
+    setLoginStatus(reason, "error");
+  });
+
   // Show login screen by default until auth state resolves.
   toggleLoginScreen(true);
+  setLoginStatus("Listo para iniciar sesión.", "info");
 
   // App vars
   let state = (auth ? initState() : (loadState() ?? initState()));
@@ -300,7 +341,6 @@
   }
 
   function renderWeightChart(){
-    if(!weightChart || !weightValue || !weightInput) return;
     if(!weightChart || !weightValue || !weightInput || !weightLabels) return;
     const day = getDay(state, currentISO);
     const weight = Number.isFinite(day.weight) ? day.weight : null;
@@ -324,28 +364,6 @@
     }
     weightChartEmpty?.classList.add("hidden");
 
-    const width = 360;
-    const height = 180;
-    const padding = {
-      top: 16,
-      right: 14,
-      bottom: 32,
-      left: 48,
-    };
-    const min = Math.min(...weights);
-    const max = Math.max(...weights);
-    const range = Math.max(1, max - min);
-    const step = data.length > 1 ? (width - padding.left - padding.right) / (data.length - 1) : 0;
-
-    let path = "";
-    const circles = [];
-    const xLabels = [];
-    data.forEach((d, idx) => {
-      const x = padding.left + step * idx;
-      const label = new Date(d.iso + "T12:00:00").toLocaleDateString("es-MX", { day: "numeric", month: "short" });
-      xLabels.push(`<text x="${x}" y="${height - 10}" text-anchor="middle">${label}</text>`);
-      if(!Number.isFinite(d.weight)) return;
-      const y = padding.top + ((max - d.weight) / range) * (height - padding.top - padding.bottom);
     const width = 320;
     const height = 120;
     const padding = 14;
@@ -364,28 +382,12 @@
       circles.push(`<circle cx="${x}" cy="${y}" r="3.5" />`);
     });
 
-    const yTicks = [max, (max + min) / 2, min];
-    const yLabels = yTicks.map((val) => {
-      const y = padding.top + ((max - val) / range) * (height - padding.top - padding.bottom);
-      return `
-        <line x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}"></line>
-        <text x="${padding.left - 8}" y="${y + 4}" text-anchor="end">${val.toFixed(1)}</text>
-      `;
-    }).join("");
-
     weightChart.innerHTML = `
       <rect x="0" y="0" width="${width}" height="${height}" rx="14" ry="14"></rect>
-      <g class="weight-grid">${yLabels}</g>
       <path d="${path}" />
       ${circles.join("")}
-      <g class="weight-axis">${xLabels.join("")}</g>
     `;
     weightChart.setAttribute("viewBox", `0 0 ${width} ${height}`);
-    weightChart.innerHTML = `
-      <rect x="0" y="0" width="${width}" height="${height}" rx="14" ry="14"></rect>
-      <path d="${path}" />
-      ${circles.join("")}
-    `;
   }
 
   function render(){
@@ -665,89 +667,50 @@
     });
   }
 
-  // Setup Firebase Authentication login/signup listeners and sync remote state.
-  // These handlers enable users to log in with email/contraseña or crear una
-  // nueva cuenta. The login overlay will be shown when no user is signed
+  // Setup Firebase Authentication login listeners and sync remote state.
+  // These handlers enable users to log in with email/contraseña. The login overlay is shown when no user is signed
   // in and hidden when a user is authenticated. When authenticated we
   // attempt to load the user's state from Firestore and persist it
   // to localStorage for offline use. Saving of state via saveState()
   // automatically syncs to Firestore when online.
   const handleLogin = async () => {
     if (!auth) {
+      setLoginStatus("No se pudo cargar Firebase. Revisa tu conexión.", "error");
       alert("El servicio de inicio de sesión no está disponible todavía.");
       return;
     }
     const email = loginEmailInput?.value?.trim();
     const pass  = loginPasswordInput?.value ?? "";
     if (!email || !pass) {
+      setLoginStatus("Por favor introduce tu email y contraseña.", "error");
       alert("Por favor introduce tu email y contraseña.");
       return;
     }
     try {
+      setLoginStatus("Conectando...", "loading");
+      if (loginBtn) loginBtn.disabled = true;
       await auth.signInWithEmailAndPassword(email, pass);
+      setLoginStatus("Sesión iniciada.", "success");
     } catch (err) {
-      alert("No se pudo iniciar sesión: " + (err?.message || err));
-    }
-  };
-
-  const handleSignup = async () => {
-    if (!auth) {
-      alert("El servicio de creación de cuenta no está disponible todavía.");
-      return;
-    }
-    const email = loginEmailInput?.value?.trim();
-    const pass  = loginPasswordInput?.value ?? "";
-    if (!email || !pass) {
-      alert("Por favor introduce tu email y contraseña.");
-      return;
-    }
-    try {
-      await auth.createUserWithEmailAndPassword(email, pass);
-      alert("Cuenta creada. Ya puedes comenzar a usar la app.");
-    } catch (err) {
-      alert("No se pudo crear la cuenta: " + (err?.message || err));
+      const details = err?.message || err;
+      const code = err?.code ? ` (${err.code})` : "";
+      setLoginStatus(`No se pudo iniciar sesión${code}.`, "error");
+      alert("No se pudo iniciar sesión: " + details);
+    } finally {
+      if (loginBtn) loginBtn.disabled = false;
     }
   };
 
   loginBtn?.addEventListener("click", handleLogin);
-  signupBtn?.addEventListener("click", handleSignup);
 
   if (auth) {
     let unsubscribeUserDoc = null;
-    // Sign in with email and password
-    loginBtn?.addEventListener("click", async () => {
-      const email = loginEmailInput?.value?.trim();
-      const pass  = loginPasswordInput?.value ?? "";
-      if (!email || !pass) {
-        alert("Por favor introduce tu email y contraseña.");
-        return;
-      }
-      try {
-        await auth.signInWithEmailAndPassword(email, pass);
-      } catch (err) {
-        alert("No se pudo iniciar sesión: " + (err?.message || err));
-      }
-    });
-    // Register a new account
-    signupBtn?.addEventListener("click", async () => {
-      const email = loginEmailInput?.value?.trim();
-      const pass  = loginPasswordInput?.value ?? "";
-      if (!email || !pass) {
-        alert("Por favor introduce tu email y contraseña.");
-        return;
-      }
-      try {
-        await auth.createUserWithEmailAndPassword(email, pass);
-        alert("Cuenta creada. Ya puedes comenzar a usar la app.");
-      } catch (err) {
-        alert("No se pudo crear la cuenta: " + (err?.message || err));
-      }
-    });
     // Observe auth state changes
     auth.onAuthStateChanged(async (user) => {
       if (user) {
         // hide login overlay
         toggleLoginScreen(false);
+        setLoginStatus("");
         if (unsubscribeUserDoc) {
           unsubscribeUserDoc();
         }
@@ -770,26 +733,13 @@
       } else {
         // no user: show login overlay
         toggleLoginScreen(true);
+        setLoginStatus("");
         if (unsubscribeUserDoc) {
           unsubscribeUserDoc();
           unsubscribeUserDoc = null;
         }
         state = loadState() ?? initState();
         render();
-      }
-    });
-
-    $("#logoutBtn")?.addEventListener("click", async () => {
-      setDrawer(false);
-      if (!auth.currentUser) {
-        alert("No hay sesión activa.");
-        return;
-      }
-      if (!confirm("¿Cerrar sesión?")) return;
-      try {
-        await auth.signOut();
-      } catch (err) {
-        alert("No se pudo cerrar sesión: " + (err?.message || err));
       }
     });
 
