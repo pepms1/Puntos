@@ -1,6 +1,7 @@
 /* Puntos Dieta – estilo inspirado en la captura (diseño iPhone friendly) */
 :root{
   --bg: #f7f3ee;
+  --login-bg: #e3f6dc;
   --card: rgba(255,255,255,0.86);
   --text: #1c1c1c;
   --muted: #7a7a7a;
@@ -572,8 +573,7 @@ textarea{
 .login-screen{
   position: fixed;
   inset: 0;
-  /* use the same background as the app for a seamless look */
-  background: var(--bg);
+  background: var(--login-bg);
   display: flex;
   align-items: center;
   justify-content: center;
