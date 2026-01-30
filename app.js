@@ -33,6 +33,11 @@
   // Referencias a los servicios de Firebase
   const auth = (typeof firebase !== 'undefined') ? firebase.auth() : null;
   const db   = (typeof firebase !== 'undefined') ? firebase.firestore() : null;
+  if (auth?.setPersistence && typeof firebase !== "undefined") {
+    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL).catch(() => {
+      auth.setPersistence(firebase.auth.Auth.Persistence.SESSION).catch(() => {});
+    });
+  }
 
   const DEFAULT_CATEGORIES = [
     { key:"cereales",   name:"Cereales",    color:"#b77a28", icon:"🌾", goal:5 },
@@ -300,7 +305,6 @@
   }
 
   function renderWeightChart(){
-    if(!weightChart || !weightValue || !weightInput) return;
     if(!weightChart || !weightValue || !weightInput || !weightLabels) return;
     const day = getDay(state, currentISO);
     const weight = Number.isFinite(day.weight) ? day.weight : null;
@@ -324,28 +328,6 @@
     }
     weightChartEmpty?.classList.add("hidden");
 
-    const width = 360;
-    const height = 180;
-    const padding = {
-      top: 16,
-      right: 14,
-      bottom: 32,
-      left: 48,
-    };
-    const min = Math.min(...weights);
-    const max = Math.max(...weights);
-    const range = Math.max(1, max - min);
-    const step = data.length > 1 ? (width - padding.left - padding.right) / (data.length - 1) : 0;
-
-    let path = "";
-    const circles = [];
-    const xLabels = [];
-    data.forEach((d, idx) => {
-      const x = padding.left + step * idx;
-      const label = new Date(d.iso + "T12:00:00").toLocaleDateString("es-MX", { day: "numeric", month: "short" });
-      xLabels.push(`<text x="${x}" y="${height - 10}" text-anchor="middle">${label}</text>`);
-      if(!Number.isFinite(d.weight)) return;
-      const y = padding.top + ((max - d.weight) / range) * (height - padding.top - padding.bottom);
     const width = 320;
     const height = 120;
     const padding = 14;
@@ -364,28 +346,12 @@
       circles.push(`<circle cx="${x}" cy="${y}" r="3.5" />`);
     });
 
-    const yTicks = [max, (max + min) / 2, min];
-    const yLabels = yTicks.map((val) => {
-      const y = padding.top + ((max - val) / range) * (height - padding.top - padding.bottom);
-      return `
-        <line x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}"></line>
-        <text x="${padding.left - 8}" y="${y + 4}" text-anchor="end">${val.toFixed(1)}</text>
-      `;
-    }).join("");
-
     weightChart.innerHTML = `
       <rect x="0" y="0" width="${width}" height="${height}" rx="14" ry="14"></rect>
-      <g class="weight-grid">${yLabels}</g>
       <path d="${path}" />
       ${circles.join("")}
-      <g class="weight-axis">${xLabels.join("")}</g>
     `;
     weightChart.setAttribute("viewBox", `0 0 ${width} ${height}`);
-    weightChart.innerHTML = `
-      <rect x="0" y="0" width="${width}" height="${height}" rx="14" ry="14"></rect>
-      <path d="${path}" />
-      ${circles.join("")}
-    `;
   }
 
   function render(){
@@ -714,35 +680,6 @@
 
   if (auth) {
     let unsubscribeUserDoc = null;
-    // Sign in with email and password
-    loginBtn?.addEventListener("click", async () => {
-      const email = loginEmailInput?.value?.trim();
-      const pass  = loginPasswordInput?.value ?? "";
-      if (!email || !pass) {
-        alert("Por favor introduce tu email y contraseña.");
-        return;
-      }
-      try {
-        await auth.signInWithEmailAndPassword(email, pass);
-      } catch (err) {
-        alert("No se pudo iniciar sesión: " + (err?.message || err));
-      }
-    });
-    // Register a new account
-    signupBtn?.addEventListener("click", async () => {
-      const email = loginEmailInput?.value?.trim();
-      const pass  = loginPasswordInput?.value ?? "";
-      if (!email || !pass) {
-        alert("Por favor introduce tu email y contraseña.");
-        return;
-      }
-      try {
-        await auth.createUserWithEmailAndPassword(email, pass);
-        alert("Cuenta creada. Ya puedes comenzar a usar la app.");
-      } catch (err) {
-        alert("No se pudo crear la cuenta: " + (err?.message || err));
-      }
-    });
     // Observe auth state changes
     auth.onAuthStateChanged(async (user) => {
       if (user) {
@@ -776,20 +713,6 @@
         }
         state = loadState() ?? initState();
         render();
-      }
-    });
-
-    $("#logoutBtn")?.addEventListener("click", async () => {
-      setDrawer(false);
-      if (!auth.currentUser) {
-        alert("No hay sesión activa.");
-        return;
-      }
-      if (!confirm("¿Cerrar sesión?")) return;
-      try {
-        await auth.signOut();
-      } catch (err) {
-        alert("No se pudo cerrar sesión: " + (err?.message || err));
       }
     });
 
