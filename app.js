@@ -347,7 +347,7 @@
 
     data.forEach(d => {
       const label = document.createElement("span");
-      label.textContent = new Date(d.iso + "T12:00:00").toLocaleDateString("es-MX", { weekday: "short" });
+      label.textContent = new Date(d.iso + "T12:00:00").toLocaleDateString("es-MX", { day: "2-digit", month: "short" });
       weightLabels.appendChild(label);
     });
 
@@ -359,26 +359,53 @@
 
     const width = 320;
     const height = 120;
-    const padding = 14;
+    const padding = {
+      left: 34,
+      right: 12,
+      top: 12,
+      bottom: 18,
+    };
     const min = Math.min(...weights);
     const max = Math.max(...weights);
     const range = Math.max(1, max - min);
-    const step = data.length > 1 ? (width - padding * 2) / (data.length - 1) : 0;
+    const chartWidth = width - padding.left - padding.right;
+    const chartHeight = height - padding.top - padding.bottom;
+    const step = data.length > 1 ? chartWidth / (data.length - 1) : 0;
+    const ticks = 4;
 
     let path = "";
     const circles = [];
+    const values = [];
     data.forEach((d, idx) => {
       if(!Number.isFinite(d.weight)) return;
-      const x = padding + step * idx;
-      const y = padding + ((max - d.weight) / range) * (height - padding * 2);
+      const x = padding.left + step * idx;
+      const y = padding.top + ((max - d.weight) / range) * chartHeight;
       path += path ? ` L ${x} ${y}` : `M ${x} ${y}`;
       circles.push(`<circle cx="${x}" cy="${y}" r="3.5" />`);
+      const labelY = Math.max(padding.top + 8, y - 8);
+      values.push(`<text class="weight-value" x="${x}" y="${labelY}" text-anchor="middle">${d.weight.toFixed(1)}</text>`);
     });
+
+    const gridLines = [];
+    const axisLabels = [];
+    for(let i = 0; i <= ticks; i += 1){
+      const y = padding.top + (chartHeight * i / ticks);
+      const value = max - (range * i / ticks);
+      gridLines.push(`<line x1="${padding.left}" y1="${y}" x2="${width - padding.right}" y2="${y}" />`);
+      axisLabels.push(`<text x="${padding.left - 6}" y="${y + 3}" text-anchor="end">${value.toFixed(1)}</text>`);
+    }
 
     weightChart.innerHTML = `
       <rect x="0" y="0" width="${width}" height="${height}" rx="14" ry="14"></rect>
+      <g class="weight-grid">${gridLines.join("")}</g>
+      <g class="weight-axis">
+        <line x1="${padding.left}" y1="${padding.top}" x2="${padding.left}" y2="${height - padding.bottom}" />
+        <line x1="${padding.left}" y1="${height - padding.bottom}" x2="${width - padding.right}" y2="${height - padding.bottom}" />
+        ${axisLabels.join("")}
+      </g>
       <path d="${path}" />
       ${circles.join("")}
+      ${values.join("")}
     `;
     weightChart.setAttribute("viewBox", `0 0 ${width} ${height}`);
   }
