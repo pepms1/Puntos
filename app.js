@@ -206,7 +206,6 @@
   const loginEmailInput = $("#loginEmail");
   const loginPasswordInput = $("#loginPassword");
   const loginBtn = $("#loginBtn");
-  const loginStatus = $("#loginStatus");
 
   // Helper to show or hide the login overlay. When "visible" is true the
   // overlay is shown (aria-hidden="false"); otherwise it is hidden. This
@@ -228,15 +227,6 @@
     loginStatus.dataset.state = state;
     loginStatus.classList.remove("hidden");
   }
-
-  window.addEventListener("error", (event) => {
-    const message = event?.message || "Error inesperado al cargar la app.";
-    setLoginStatus(message, "error");
-  });
-  window.addEventListener("unhandledrejection", (event) => {
-    const reason = event?.reason?.message || event?.reason || "Error inesperado al iniciar sesión.";
-    setLoginStatus(reason, "error");
-  });
 
   // Show login screen by default until auth state resolves.
   toggleLoginScreen(true);
@@ -692,12 +682,7 @@
       await auth.signInWithEmailAndPassword(email, pass);
       setLoginStatus("Sesión iniciada.", "success");
     } catch (err) {
-      const details = err?.message || err;
-      const code = err?.code ? ` (${err.code})` : "";
-      setLoginStatus(`No se pudo iniciar sesión${code}.`, "error");
-      alert("No se pudo iniciar sesión: " + details);
-    } finally {
-      if (loginBtn) loginBtn.disabled = false;
+      alert("No se pudo iniciar sesión: " + (err?.message || err));
     }
   };
 
