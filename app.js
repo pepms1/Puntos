@@ -171,6 +171,7 @@
   const weightValue = $("#weightValue");
   const weightChart = $("#weightChart");
   const weightChartEmpty = $("#weightChartEmpty");
+  const weightLabels = $("#weightLabels");
 
   // Export modal
   const exportModal = $("#exportModal");
@@ -300,6 +301,7 @@
 
   function renderWeightChart(){
     if(!weightChart || !weightValue || !weightInput) return;
+    if(!weightChart || !weightValue || !weightInput || !weightLabels) return;
     const day = getDay(state, currentISO);
     const weight = Number.isFinite(day.weight) ? day.weight : null;
     weightValue.textContent = weight ? `${weight.toFixed(1)} kg` : "Sin registro";
@@ -308,6 +310,13 @@
     const data = getRecentWeightData();
     const weights = data.map(d => d.weight).filter(v => Number.isFinite(v));
     weightChart.innerHTML = "";
+    weightLabels.innerHTML = "";
+
+    data.forEach(d => {
+      const label = document.createElement("span");
+      label.textContent = new Date(d.iso + "T12:00:00").toLocaleDateString("es-MX", { weekday: "short" });
+      weightLabels.appendChild(label);
+    });
 
     if(weights.length === 0){
       weightChartEmpty?.classList.remove("hidden");
@@ -337,6 +346,20 @@
       xLabels.push(`<text x="${x}" y="${height - 10}" text-anchor="middle">${label}</text>`);
       if(!Number.isFinite(d.weight)) return;
       const y = padding.top + ((max - d.weight) / range) * (height - padding.top - padding.bottom);
+    const width = 320;
+    const height = 120;
+    const padding = 14;
+    const min = Math.min(...weights);
+    const max = Math.max(...weights);
+    const range = Math.max(1, max - min);
+    const step = data.length > 1 ? (width - padding * 2) / (data.length - 1) : 0;
+
+    let path = "";
+    const circles = [];
+    data.forEach((d, idx) => {
+      if(!Number.isFinite(d.weight)) return;
+      const x = padding + step * idx;
+      const y = padding + ((max - d.weight) / range) * (height - padding * 2);
       path += path ? ` L ${x} ${y}` : `M ${x} ${y}`;
       circles.push(`<circle cx="${x}" cy="${y}" r="3.5" />`);
     });
@@ -358,6 +381,11 @@
       <g class="weight-axis">${xLabels.join("")}</g>
     `;
     weightChart.setAttribute("viewBox", `0 0 ${width} ${height}`);
+    weightChart.innerHTML = `
+      <rect x="0" y="0" width="${width}" height="${height}" rx="14" ry="14"></rect>
+      <path d="${path}" />
+      ${circles.join("")}
+    `;
   }
 
   function render(){
@@ -539,6 +567,12 @@
   // Tabs
   tabs.forEach(t => t.addEventListener("click", () => setMode(t.dataset.mode)));
 
+  // Goal modal open
+  editGoalBtn.addEventListener("click", () => {
+    totalGoalInput.value = state.settings.totalGoal;
+    openModal(goalModal);
+  });
+
   saveTotalGoalBtn.addEventListener("click", () => {
     const val = parseNumber(totalGoalInput.value);
     if(!Number.isFinite(val) || val<0) return;
@@ -702,6 +736,20 @@
         }
         state = loadState() ?? initState();
         render();
+      }
+    });
+
+    $("#logoutBtn")?.addEventListener("click", async () => {
+      setDrawer(false);
+      if (!auth.currentUser) {
+        alert("No hay sesión activa.");
+        return;
+      }
+      if (!confirm("¿Cerrar sesión?")) return;
+      try {
+        await auth.signOut();
+      } catch (err) {
+        alert("No se pudo cerrar sesión: " + (err?.message || err));
       }
     });
 
