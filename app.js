@@ -177,6 +177,7 @@
   const undoBtn = $("#undoBtn");
   const goalInput = $("#goalInput");
   const saveGoalBtn = $("#saveGoalBtn");
+  const editGoalBtn = $("#editGoalBtn");
 
   // Goal modal
   const goalModal = $("#goalModal");
@@ -562,7 +563,7 @@
   tabs.forEach(t => t.addEventListener("click", () => setMode(t.dataset.mode)));
 
   // Goal modal open
-  editGoalBtn.addEventListener("click", () => {
+  editGoalBtn?.addEventListener("click", () => {
     totalGoalInput.value = state.settings.totalGoal;
     openModal(goalModal);
   });
