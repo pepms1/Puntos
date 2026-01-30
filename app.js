@@ -73,12 +73,21 @@
 
   const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
 
+  function showStorageWarning(message) {
+    const statusEl = document.querySelector("#loginStatus");
+    if (!statusEl) return;
+    statusEl.textContent = message;
+    statusEl.dataset.state = "error";
+    statusEl.classList.remove("hidden");
+  }
+
   function loadState(){
     try{
       const raw = localStorage.getItem(STORE_KEY);
       if(!raw) return null;
       return JSON.parse(raw);
     }catch(e){
+      showStorageWarning("Tu navegador está bloqueando el almacenamiento. Revisa la configuración de cookies.");
       return null;
     }
   }
@@ -90,7 +99,11 @@
       db.collection('users').doc(auth.currentUser.uid).set(state).catch(()=>{});
       return;
     }
-    localStorage.setItem(STORE_KEY, JSON.stringify(state));
+    try{
+      localStorage.setItem(STORE_KEY, JSON.stringify(state));
+    }catch(e){
+      showStorageWarning("Tu navegador está bloqueando el almacenamiento. Revisa la configuración de cookies.");
+    }
   }
 
   function initState(){
@@ -217,6 +230,7 @@
 
   // Show login screen by default until auth state resolves.
   toggleLoginScreen(true);
+  setLoginStatus("Listo para iniciar sesión.", "info");
 
   // App vars
   let state = (auth ? initState() : (loadState() ?? initState()));
