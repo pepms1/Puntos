@@ -198,6 +198,9 @@
     loginScreen.setAttribute("aria-hidden", visible ? "false" : "true");
   }
 
+  // Show login screen by default until auth state resolves.
+  toggleLoginScreen(true);
+
   // App vars
   let state = (auth ? initState() : (loadState() ?? initState()));
   let currentISO = todayISO();
