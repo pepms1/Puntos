@@ -613,3 +613,17 @@ textarea{
 .login-status[data-state="error"]{
   color: #b00020;
 }
+.login-link{
+  background: transparent;
+  border: 0;
+  color: #8b2b2b;
+  font-weight: 800;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 4px;
+  text-align: center;
+}
+.login-link:focus{
+  outline: 2px solid rgba(139,43,43,0.35);
+  outline-offset: 2px;
+}
