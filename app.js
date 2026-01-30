@@ -202,6 +202,19 @@
     loginScreen.setAttribute("aria-hidden", visible ? "false" : "true");
   }
 
+  function setLoginStatus(message, state = "info") {
+    if (!loginStatus) return;
+    if (!message) {
+      loginStatus.textContent = "";
+      loginStatus.classList.add("hidden");
+      loginStatus.removeAttribute("data-state");
+      return;
+    }
+    loginStatus.textContent = message;
+    loginStatus.dataset.state = state;
+    loginStatus.classList.remove("hidden");
+  }
+
   // Show login screen by default until auth state resolves.
   toggleLoginScreen(true);
 
@@ -630,26 +643,30 @@
     });
   }
 
-  // Setup Firebase Authentication login/signup listeners and sync remote state.
-  // These handlers enable users to log in with email/contraseña or crear una
-  // nueva cuenta. The login overlay will be shown when no user is signed
+  // Setup Firebase Authentication login listeners and sync remote state.
+  // These handlers enable users to log in with email/contraseña. The login overlay is shown when no user is signed
   // in and hidden when a user is authenticated. When authenticated we
   // attempt to load the user's state from Firestore and persist it
   // to localStorage for offline use. Saving of state via saveState()
   // automatically syncs to Firestore when online.
   const handleLogin = async () => {
     if (!auth) {
+      setLoginStatus("No se pudo cargar Firebase. Revisa tu conexión.", "error");
       alert("El servicio de inicio de sesión no está disponible todavía.");
       return;
     }
     const email = loginEmailInput?.value?.trim();
     const pass  = loginPasswordInput?.value ?? "";
     if (!email || !pass) {
+      setLoginStatus("Por favor introduce tu email y contraseña.", "error");
       alert("Por favor introduce tu email y contraseña.");
       return;
     }
     try {
+      setLoginStatus("Conectando...", "loading");
+      if (loginBtn) loginBtn.disabled = true;
       await auth.signInWithEmailAndPassword(email, pass);
+      setLoginStatus("Sesión iniciada.", "success");
     } catch (err) {
       alert("No se pudo iniciar sesión: " + (err?.message || err));
     }
@@ -664,6 +681,7 @@
       if (user) {
         // hide login overlay
         toggleLoginScreen(false);
+        setLoginStatus("");
         if (unsubscribeUserDoc) {
           unsubscribeUserDoc();
         }
@@ -686,6 +704,7 @@
       } else {
         // no user: show login overlay
         toggleLoginScreen(true);
+        setLoginStatus("");
         if (unsubscribeUserDoc) {
           unsubscribeUserDoc();
           unsubscribeUserDoc = null;

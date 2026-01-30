@@ -598,3 +598,18 @@ textarea{
   font-weight: 900;
   text-align: center;
 }
+.login-status{
+  min-height: 18px;
+  font-size: 13px;
+  text-align: center;
+  color: #6b4b2a;
+}
+.login-status[data-state="loading"]{
+  color: #6b4b2a;
+}
+.login-status[data-state="success"]{
+  color: #1f7a3a;
+}
+.login-status[data-state="error"]{
+  color: #b00020;
+}
