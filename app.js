@@ -193,7 +193,6 @@
   const loginEmailInput = $("#loginEmail");
   const loginPasswordInput = $("#loginPassword");
   const loginBtn = $("#loginBtn");
-  const signupBtn = $("#signupBtn");
 
   // Helper to show or hide the login overlay. When "visible" is true the
   // overlay is shown (aria-hidden="false"); otherwise it is hidden. This
@@ -656,27 +655,7 @@
     }
   };
 
-  const handleSignup = async () => {
-    if (!auth) {
-      alert("El servicio de creación de cuenta no está disponible todavía.");
-      return;
-    }
-    const email = loginEmailInput?.value?.trim();
-    const pass  = loginPasswordInput?.value ?? "";
-    if (!email || !pass) {
-      alert("Por favor introduce tu email y contraseña.");
-      return;
-    }
-    try {
-      await auth.createUserWithEmailAndPassword(email, pass);
-      alert("Cuenta creada. Ya puedes comenzar a usar la app.");
-    } catch (err) {
-      alert("No se pudo crear la cuenta: " + (err?.message || err));
-    }
-  };
-
   loginBtn?.addEventListener("click", handleLogin);
-  signupBtn?.addEventListener("click", handleSignup);
 
   if (auth) {
     let unsubscribeUserDoc = null;
