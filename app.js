@@ -142,6 +142,9 @@
 
   // Elements
   const grid = $("#grid");
+  const usedLogSection = $("#usedLog");
+  const usedLogList = $("#usedLogList");
+  const usedLogEmpty = $("#usedLogEmpty");
   const remainingTotalEl = $("#remainingTotal");
   const bigGaugeEl = $("#bigGauge");
   const bigLabelEl = $("#bigLabel");
@@ -281,6 +284,73 @@
       rgba(120,80,40,0.80) ${sweepTurns}turn,
       rgba(0,0,0,0.07) ${sweepTurns}turn 0.75turn,
       rgba(0,0,0,0.00) 0.75turn 1turn)`;
+  }
+
+  function formatTime(ts){
+    const date = new Date(ts);
+    return date.toLocaleTimeString("es-MX", { hour: "2-digit", minute: "2-digit", hour12: false });
+  }
+
+  function formatHourKey(ts){
+    const date = new Date(ts);
+    return String(date.getHours()).padStart(2, "0");
+  }
+
+  function renderUsedLog(day){
+    if(!usedLogSection || !usedLogList || !usedLogEmpty) return;
+    usedLogList.innerHTML = "";
+
+    const history = Array.isArray(day.history) ? [...day.history] : [];
+    if(history.length === 0){
+      usedLogEmpty.classList.remove("hidden");
+      return;
+    }
+    usedLogEmpty.classList.add("hidden");
+
+    const categoriesByKey = Object.fromEntries(state.categories.map(c => [c.key, c]));
+    history.sort((a, b) => (b.ts ?? 0) - (a.ts ?? 0));
+
+    const grouped = new Map();
+    history.forEach(entry => {
+      const ts = Number.isFinite(entry.ts) ? entry.ts : 0;
+      const hourKey = formatHourKey(ts);
+      if(!grouped.has(hourKey)) grouped.set(hourKey, []);
+      grouped.get(hourKey).push({ ...entry, ts });
+    });
+
+    grouped.forEach((entries, hourKey) => {
+      const hourBlock = document.createElement("div");
+      hourBlock.className = "used-hour";
+      hourBlock.innerHTML = `<div class="used-hour-title">${hourKey}:00</div>`;
+
+      const list = document.createElement("div");
+      list.className = "used-hour-list";
+
+      entries.forEach(entry => {
+        const cat = categoriesByKey[entry.key];
+        const delta = round1(entry.delta ?? 0);
+        const sign = delta > 0 ? "+" : "";
+        const deltaText = `${sign}${delta.toFixed(1)}`;
+        const timeText = formatTime(entry.ts);
+
+        const row = document.createElement("div");
+        row.className = "used-entry";
+        row.innerHTML = `
+          <div class="used-entry-main">
+            <span class="used-entry-icon" aria-hidden="true">${cat?.icon ?? "•"}</span>
+            <div>
+              <div class="used-entry-name">${cat?.name ?? entry.key}</div>
+              <div class="used-entry-time">${timeText}</div>
+            </div>
+          </div>
+          <div class="used-entry-delta ${delta < 0 ? "neg" : "pos"}">${deltaText}</div>
+        `;
+        list.appendChild(row);
+      });
+
+      hourBlock.appendChild(list);
+      usedLogList.appendChild(hourBlock);
+    });
   }
 
   function makeCard(c, day){
@@ -432,9 +502,18 @@
     bigLabelEl.textContent = "Puntos restantes";
     setBigGauge(Math.max(0, remaining), Math.max(0.0001, state.settings.totalGoal));
 
+    const isUsedMode = state.settings.mode === "used";
+
     // Grid
     grid.innerHTML = "";
     state.categories.forEach(c => grid.appendChild(makeCard(c, day)));
+    grid.classList.toggle("hidden", isUsedMode);
+
+    // Used log
+    usedLogSection?.classList.toggle("hidden", !isUsedMode);
+    if(isUsedMode){
+      renderUsedLog(day);
+    }
 
     // Keep goal input aligned if goal modal open
     totalGoalInput.value = state.settings.totalGoal;

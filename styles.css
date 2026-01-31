@@ -192,6 +192,86 @@ body{
   gap: 14px 10px;
 }
 
+.used-log{
+  margin-top: 14px;
+}
+.used-log-header{
+  font-weight: 900;
+  font-size: 16px;
+}
+.used-log-empty{
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 12px;
+  margin-top: 8px;
+}
+.used-log-list{
+  display:flex;
+  flex-direction:column;
+  gap: 14px;
+  margin-top: 12px;
+}
+.used-hour-title{
+  font-weight: 800;
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 8px;
+}
+.used-hour-list{
+  display:flex;
+  flex-direction:column;
+  gap: 8px;
+}
+.used-entry{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.78);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+  border: 1px solid rgba(0,0,0,0.05);
+}
+.used-entry-main{
+  display:flex;
+  align-items:center;
+  gap: 10px;
+}
+.used-entry-icon{
+  font-size: 20px;
+}
+.used-entry-name{
+  font-weight: 800;
+  font-size: 14px;
+}
+.used-entry-time{
+  font-size: 12px;
+  color: var(--muted);
+  font-weight: 700;
+  margin-top: 2px;
+}
+.used-entry-delta{
+  font-weight: 900;
+  font-size: 14px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(0,0,0,0.05);
+  color: #4a4a4a;
+  min-width: 60px;
+  text-align:center;
+}
+.used-entry-delta.pos{
+  background: rgba(139,43,43,0.18);
+  color: #5a1010;
+}
+.used-entry-delta.neg{
+  background: rgba(60,120,90,0.18);
+  color: #255a3a;
+}
+
 .card{
   display:flex;
   flex-direction:column;
