@@ -1,10 +1,10 @@
 /* Puntos Dieta – estilo inspirado en la captura (diseño iPhone friendly) */
 :root{
-  --bg: #f7f3ee;
-  --login-bg: #e3f6dc;
+  --bg: #eef8f1;
+  --login-bg: #ddf5e4;
   --card: rgba(255,255,255,0.86);
-  --text: #1c1c1c;
-  --muted: #7a7a7a;
+  --text: #193026;
+  --muted: #6a7b72;
   --shadow: 0 10px 25px rgba(0,0,0,0.08);
   --radius: 22px;
   --safe-top: env(safe-area-inset-top);
@@ -47,7 +47,7 @@ body{
   box-shadow: 0 4px 12px rgba(0,0,0,0.06);
   display:grid;
   place-items:center;
-  color:#3a3a3a;
+  color:#2f4037;
 }
 
 .icon{ font-weight:700; }
@@ -60,17 +60,17 @@ body{
 .brand-top{
   font-weight:800;
   letter-spacing: 0.12em;
-  color:#8b2b2b;
+  color:#2f7d4f;
   font-size: 22px;
 }
 .brand-light{
   font-weight:700;
   letter-spacing: 0.06em;
-  color:#3a3a3a;
+  color:#2d4638;
 }
 .brand-flourish{
   margin-top: 2px;
-  color:#8b2b2b;
+  color:#2f7d4f;
   opacity:0.7;
   font-size: 18px;
 }
@@ -105,7 +105,7 @@ body{
 .daylink{
   border:0;
   background: transparent;
-  color:#6a6a6a;
+  color:#65756d;
   font-weight:600;
   padding: 8px 8px;
 }
@@ -113,7 +113,7 @@ body{
   border:0;
   background: transparent;
   font-weight:800;
-  color:#2c2c2c;
+  color:#24372d;
   font-size: 16px;
   padding: 8px 12px;
   border-radius: 999px;
@@ -127,7 +127,7 @@ body{
   border-radius: 999px;
   position: relative;
   background:
-    conic-gradient(from 225deg, rgba(120,80,40,0.25) 0turn, rgba(120,80,40,0.25) 0.75turn, rgba(0,0,0,0.06) 0.75turn 1turn);
+    conic-gradient(from 225deg, rgba(84,160,111,0.28) 0turn, rgba(84,160,111,0.28) 0.75turn, rgba(0,0,0,0.06) 0.75turn 1turn);
   display:grid;
   place-items:center;
 }
@@ -148,7 +148,7 @@ body{
 .big-number{
   font-weight:900;
   font-size: 44px;
-  color:#6a4a2a;
+  color:#2f6c4a;
   letter-spacing: 0.02em;
 }
 .big-label{
@@ -176,13 +176,13 @@ body{
   border:0;
   padding: 10px 14px;
   border-radius: 12px;
-  background: rgba(0,0,0,0.05);
+  background: rgba(47,125,79,0.08);
   font-weight:800;
-  color:#4a4a4a;
+  color:#2f4037;
 }
 .tab.active{
-  background: rgba(0,0,0,0.10);
-  color:#1e1e1e;
+  background: rgba(47,125,79,0.16);
+  color:#1d2f26;
 }
 
 .grid{
@@ -258,18 +258,18 @@ body{
   font-size: 14px;
   padding: 6px 10px;
   border-radius: 999px;
-  background: rgba(0,0,0,0.05);
-  color: #4a4a4a;
+  background: rgba(47,125,79,0.10);
+  color: #2f4037;
   min-width: 60px;
   text-align:center;
 }
 .used-entry-delta.pos{
-  background: rgba(139,43,43,0.18);
-  color: #5a1010;
+  background: rgba(47,125,79,0.22);
+  color: #245a3a;
 }
 .used-entry-delta.neg{
-  background: rgba(60,120,90,0.18);
-  color: #255a3a;
+  background: rgba(88,160,110,0.18);
+  color: #1f5a3a;
 }
 
 .card{
@@ -321,7 +321,7 @@ body{
   font-weight:900;
   font-size: 14px;
   text-align:center;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.10);
+  box-shadow: 0 6px 16px rgba(47,125,79,0.24);
 }
 .card-title{
   font-weight:900;
@@ -356,7 +356,7 @@ body{
   top:0; left:0;
   width: min(320px, 88vw);
   height: 100%;
-  background: rgba(255,255,255,0.96);
+  background: rgba(247,255,249,0.98);
   padding-top: calc(12px + var(--safe-top));
   box-shadow: 12px 0 30px rgba(0,0,0,0.18);
   transform: translateX(-105%);
@@ -384,7 +384,7 @@ body{
   border:0;
   padding: 14px 12px;
   border-radius: 14px;
-  background: rgba(0,0,0,0.06);
+  background: rgba(47,125,79,0.08);
   font-weight:800;
   text-align:left;
 }
@@ -449,7 +449,7 @@ body{
   gap: 10px;
 }
 .stat{
-  background: rgba(0,0,0,0.05);
+  background: rgba(47,125,79,0.08);
   padding: 10px;
   border-radius: 14px;
 }
@@ -479,11 +479,11 @@ body{
   border-radius: 999px;
   padding: 12px 10px;
   font-weight:900;
-  background: rgba(0,0,0,0.06);
+  background: rgba(47,125,79,0.10);
 }
 .custom{
   margin-top: 12px;
-  background: rgba(0,0,0,0.05);
+  background: rgba(47,125,79,0.08);
   padding: 12px;
   border-radius: 14px;
 }
@@ -514,16 +514,16 @@ body{
   border-radius: 14px;
   padding: 12px 12px;
   font-weight:900;
-  background: rgba(0,0,0,0.06);
+  background: rgba(47,125,79,0.10);
   flex:1;
 }
-.btn.primary{ background: rgba(139,43,43,0.16); color:#5a1010; }
+.btn.primary{ background: rgba(47,125,79,0.20); color:#1f5a3a; }
 .btn.danger{ background: rgba(200,40,40,0.14); color:#7a0a0a; }
 .undo-row{ margin-top: 10px; }
 
 .divider{
   height: 1px;
-  background: rgba(0,0,0,0.08);
+  background: rgba(47,125,79,0.14);
   margin: 14px 0;
 }
 
@@ -536,7 +536,7 @@ body{
 
 .p{
   margin: 0 0 10px;
-  color:#2f2f2f;
+  color:#22382f;
   font-weight:650;
 }
 
@@ -590,7 +590,7 @@ body{
   stroke-width: 1;
 }
 .weight-chart .weight-value{
-  fill: #6f1f1f;
+  fill: #2f6c4a;
   font-size: 9px;
   font-weight: 700;
 }
@@ -599,16 +599,16 @@ body{
 }
 .weight-chart path{
   fill: none;
-  stroke: #8b2b2b;
+  stroke: #2f7d4f;
   stroke-width: 2.5;
 }
 .weight-chart path{
   fill: none;
-  stroke: #8b2b2b;
+  stroke: #2f7d4f;
   stroke-width: 2.5;
 }
 .weight-chart circle{
-  fill: #8b2b2b;
+  fill: #2f7d4f;
   stroke: #fff;
   stroke-width: 1.5;
 }
@@ -692,10 +692,10 @@ textarea{
   min-height: 18px;
   font-size: 13px;
   text-align: center;
-  color: #6b4b2a;
+  color: #2f6c4a;
 }
 .login-status[data-state="loading"]{
-  color: #6b4b2a;
+  color: #2f6c4a;
 }
 .login-status[data-state="success"]{
   color: #1f7a3a;
@@ -706,7 +706,7 @@ textarea{
 .login-link{
   background: transparent;
   border: 0;
-  color: #8b2b2b;
+  color: #2f7d4f;
   font-weight: 800;
   text-decoration: underline;
   cursor: pointer;
@@ -714,6 +714,6 @@ textarea{
   text-align: center;
 }
 .login-link:focus{
-  outline: 2px solid rgba(139,43,43,0.35);
+  outline: 2px solid rgba(47,125,79,0.35);
   outline-offset: 2px;
 }
