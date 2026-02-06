@@ -194,6 +194,7 @@
   const weightChart = $("#weightChart");
   const weightChartEmpty = $("#weightChartEmpty");
   const weightLabels = $("#weightLabels");
+  const weightScroll = $("#weightScroll");
 
   // Export modal
   const exportModal = $("#exportModal");
@@ -392,14 +393,19 @@
     return el;
   }
 
-  function getRecentWeightData(){
-    const days = [];
-    for(let i = 6; i >= 0; i -= 1){
-      const iso = addDaysISO(currentISO, -i);
-      const day = state.days[iso];
-      const weight = Number.isFinite(day?.weight) ? day.weight : null;
-      days.push({ iso, weight });
+  function getWeightData(){
+    const days = Object.entries(state.days || {})
+      .map(([iso, day]) => ({
+        iso,
+        weight: Number.isFinite(day?.weight) ? day.weight : null,
+      }))
+      .filter(d => Number.isFinite(d.weight))
+      .sort((a, b) => a.iso.localeCompare(b.iso));
+
+    if(days.length === 0){
+      return [];
     }
+
     return days;
   }
 
@@ -410,7 +416,7 @@
     weightValue.textContent = weight ? `${weight.toFixed(1)} kg` : "Sin registro";
     weightInput.value = weight ? weight.toFixed(1) : "";
 
-    const data = getRecentWeightData();
+    const data = getWeightData();
     const weights = data.map(d => d.weight).filter(v => Number.isFinite(v));
     weightChart.innerHTML = "";
     weightLabels.innerHTML = "";
@@ -427,7 +433,8 @@
     }
     weightChartEmpty?.classList.add("hidden");
 
-    const width = 320;
+    const pointSpacing = 44;
+    const minWidth = 320;
     const height = 120;
     const padding = {
       left: 34,
@@ -435,12 +442,13 @@
       top: 12,
       bottom: 18,
     };
+    const width = Math.max(minWidth, data.length > 1 ? padding.left + padding.right + ((data.length - 1) * pointSpacing) : minWidth);
     const min = Math.min(...weights);
     const max = Math.max(...weights);
     const range = Math.max(1, max - min);
     const chartWidth = width - padding.left - padding.right;
     const chartHeight = height - padding.top - padding.bottom;
-    const step = data.length > 1 ? chartWidth / (data.length - 1) : 0;
+    const step = data.length > 1 ? Math.max(pointSpacing, chartWidth / (data.length - 1)) : 0;
     const ticks = 4;
 
     let path = "";
@@ -478,6 +486,17 @@
       ${values.join("")}
     `;
     weightChart.setAttribute("viewBox", `0 0 ${width} ${height}`);
+    weightChart.style.minWidth = `${width}px`;
+    weightLabels.style.gridTemplateColumns = `repeat(${data.length}, minmax(44px, 1fr))`;
+
+    if(weightScroll){
+      const currentIndex = data.findIndex(d => d.iso === currentISO);
+      if(currentIndex >= 0){
+        const currentX = padding.left + (step * currentIndex);
+        const target = Math.max(0, currentX - (weightScroll.clientWidth / 2));
+        weightScroll.scrollTo({ left: target, behavior: "smooth" });
+      }
+    }
   }
 
   function render(){
